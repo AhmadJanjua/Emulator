@@ -9,44 +9,20 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    Chip8 chip(argv[1]);
-
-    chip.memory_dump();
-    return 0;
     // Window (Wrapper around SDL)
     Window win = Window();
-    
-    // Screen Buffer: transposed for better caching
-    uint8_t pixel_buffer[BUF_HEIGHT][BUF_WIDTH] = { 0 };
-    bool swap = false;
-    
+    Chip8 chip(win, argv[1]);
+
     // Main Loop
-    bool running = true;
     uint32_t time_start = SDL_GetTicks();
     uint32_t time_elapsed = SDL_GetTicks();
 
-    SDL_Event e;
-    while (running) {
+    while (win.running) {
         // Poll Events
-        while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) {
-                running = false;
-            }
-        }
+        win.poll();
 
-        // Draw
-        swap = !swap;
-        for (int y = 0; y < BUF_HEIGHT; y++) {
-            for (int x = 0; x < BUF_WIDTH; x++) {
-                if ((x + y + swap) % 2 == 0)
-                    pixel_buffer[y][x] = ON;
-                else
-                    pixel_buffer[y][x] = OFF;
-            }
-        }
-    
-         // Update
-        win.update_pixels(pixel_buffer);
+        // run
+        chip.run();
         win.render();
 
         // Run at 60 fps
