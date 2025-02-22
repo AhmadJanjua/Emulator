@@ -88,13 +88,62 @@ void Window::update_pixels(uint8_t pixel_buffer[BUF_HEIGHT][BUF_WIDTH]) {
     // Update texture
     uint8_t* dst = (uint8_t*)pixels;
     for (int y = 0; y < BUF_HEIGHT; y++) {
+        int offset = y * (pitch / sizeof(uint8_t));
         for (int x = 0; x < BUF_WIDTH; x++) {
-            dst[y * (pitch / sizeof(uint8_t)) + x] = pixel_buffer[y][x];
+            dst[offset + x] = pixel_buffer[y][x];
         }
     }
 
     // Unlock texture
     SDL_UnlockTexture(texture);
+}
+
+void Window::set_pixel(int x, int y, bool on) {
+    void* pixels;
+    int pitch;
+
+    // Lock texture
+    if (SDL_LockTexture(texture, NULL, &pixels, &pitch) < 0) {
+        std::cerr << "Unable to lock texture. Error: " << SDL_GetError() << "\n";
+        return;
+    }
+    
+    // Update texture
+    uint8_t* dst = (uint8_t*)pixels;
+    int offset = y * (pitch / sizeof(uint8_t));
+
+    if (on) {
+        dst[offset + x] = ON;
+    } else {
+        dst[offset + x] = OFF;
+    }
+
+    // Unlock texture
+    SDL_UnlockTexture(texture);
+}
+
+void Window::clear_pixels() {
+    void* pixels;
+    int pitch;
+
+    // Lock texture
+    if (SDL_LockTexture(texture, NULL, &pixels, &pitch) < 0) {
+        std::cerr << "Unable to lock texture. Error: " << SDL_GetError() << "\n";
+        return;
+    }
+
+    // Update texture
+    uint8_t* dst = (uint8_t*)pixels;
+    for (int y = 0; y < BUF_HEIGHT; y++) {
+        int offset = y * (pitch / sizeof(uint8_t));
+        for (int x = 0; x < BUF_WIDTH; x++) {
+            dst[offset + x] = OFF;
+        }
+    }
+
+    // Unlock texture
+    SDL_UnlockTexture(texture);
+
 }
 
 void Window::render() {

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <SDL2/SDL.h>
 #include <iostream>
 
@@ -12,13 +14,13 @@
 
 class Window {
 private:
-//  -- Variables
+// -- Variables
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* texture = nullptr;
     SDL_Rect rect_display = { 0, 0, WIN_WIDTH, WIN_HEIGHT };
 
-//  -- Helper functions
+// -- Helper functions
     // Initializes and reports errors for setting up SDL
     bool init_sdl();
 
@@ -26,14 +28,20 @@ private:
     void close_sdl();
 
 public:
-//  -- Ctor/dtor
+// -- Ctor/dtor
     Window();
     ~Window();
 
-//  -- Functions
+// -- Functions
     // Replace the pixels on screen with a new buffer
     void update_pixels(uint8_t pixel_buffer[BUF_HEIGHT][BUF_WIDTH]);
-    
+
+    // Turn a single pixel on or off
+    void set_pixel(int x, int y, bool on);
+
+    // Clear the entire screen
+    void clear_pixels();
+
     // Render the current state of the texture on to the screen
     void render();
 

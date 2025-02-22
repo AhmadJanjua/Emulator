@@ -1,11 +1,22 @@
 #include "Window.h"
+#include "Chip8.h"
 #include <iostream>
 
-int main() {
+int main(int argc, char* argv[]) {
+    // Setup arguments and usage
+    if (argc != 2) {
+        std::cout << "Usage: please supply rom <filename>" << std::endl;
+        return 1;
+    }
+
+    Chip8 chip(argv[1]);
+
+    chip.memory_dump();
+    return 0;
     // Window (Wrapper around SDL)
     Window win = Window();
     
-    // Screen Buffer
+    // Screen Buffer: transposed for better caching
     uint8_t pixel_buffer[BUF_HEIGHT][BUF_WIDTH] = { 0 };
     bool swap = false;
     
@@ -41,7 +52,7 @@ int main() {
         // Run at 60 fps
         time_elapsed = SDL_GetTicks() - time_start;
         if (time_elapsed < 16) {
-            SDL_Delay(17 - time_elapsed);
+            SDL_Delay(16 - time_elapsed);
         }
         time_start = SDL_GetTicks();
     }
