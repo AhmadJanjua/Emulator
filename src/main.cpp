@@ -14,23 +14,26 @@ int main(int argc, char* argv[]) {
     Chip8 chip(win, argv[1]);
 
     // Main Loop
-    uint32_t time_start = SDL_GetTicks();
-    uint32_t time_elapsed = SDL_GetTicks();
+    uint64_t time_start = SDL_GetTicks64();
 
     while (win.running) {
         // Poll Events
         win.poll();
 
         // run
-        chip.run();
-        win.render();
+        chip.run(false);
+        
+        // Run at render at 60 fps
+        if (SDL_GetTicks() - time_start >= 16) {
+            // reset the time + force render to be counted
+            time_start = SDL_GetTicks();
 
-        // Run at 60 fps
-        time_elapsed = SDL_GetTicks() - time_start;
-        if (time_elapsed < 16) {
-            SDL_Delay(16 - time_elapsed);
+            // run and tick the timer
+            chip.run(true);
+
+            // update display
+            win.render();
         }
-        time_start = SDL_GetTicks();
     }
 
     return 0;

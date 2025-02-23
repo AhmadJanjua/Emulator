@@ -22,9 +22,11 @@ private:
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* texture = nullptr;
     SDL_Rect rect_display = { 0, 0, WIN_WIDTH, WIN_HEIGHT };
-    uint8_t pixel_buffer[BUF_WIDTH * BUF_HEIGHT];
     SDL_Event event;
-    bool key_pressed[8] = { 0 };
+
+    uint64_t prev_render;
+    uint8_t* pixel_buffer = nullptr;
+    bool key_pressed[16] = { 0 };
 
     const Key_Lut KEY_MAP = {
         { SDLK_1, 0x1 }, { SDLK_2, 0x2 }, { SDLK_3, 0x3 }, { SDLK_4, 0xC },
@@ -49,9 +51,6 @@ public:
     ~Window();
 
 // -- Functions
-    // Replace the pixels on screen with a new buffer
-    void update_pixels();
-
     // Turn a single pixel on or off
     void set_pixel(int x, int y, bool on);
 
@@ -69,5 +68,6 @@ public:
     uint8_t await_keypress();
 
     // check if key has been pressed
-    bool get_key_press(int idx) { return key_pressed[idx]; }
+    bool get_key_press(int idx);
+    void reset_key_press(int idx);
 };

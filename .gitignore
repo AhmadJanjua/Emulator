@@ -30,8 +30,5 @@
 *.exe
 *.out
 *.app
-roms/test1.ch8
+roms/*
 .vscode/settings.json
-roms/test2.ch8
-roms/test3.ch8
-roms/test4.ch8

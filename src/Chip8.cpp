@@ -53,7 +53,7 @@ void Chip8::memory_dump() {
     std::cout << std::dec << std::endl;
 }
 
-void Chip8::run() {
+void Chip8::run(bool decrement) {
     if (pc < 4096) {
         // get the instruction
         uint16_t instr = memory[pc] << 8 | memory[pc + 1];
@@ -61,7 +61,12 @@ void Chip8::run() {
         // auto increment the program counter
         pc += 2;
 
+
         run_instr(instr);
+
+        if (decrement && reg_t > 0) {
+            reg_t--;
+        }
     }
 }
 
@@ -78,7 +83,9 @@ void Chip8::run_instr(uint16_t instr) {
     case 0x3: return se3((instr >> 8) & 0xF, instr & 0xFF);
     case 0x4: return sne4((instr >> 8) & 0xF, instr & 0xFF);
     case 0x5:
-        if ((instr & 0xF) == 0) return se5((instr >> 8) & 0xF, (instr >> 4) & 0xF);
+        if ((instr & 0xF) == 0) {
+            return se5((instr >> 8) & 0xF, (instr >> 4) & 0xF);
+        }
         break;
     case 0x6: return ld6((instr >> 8) & 0xF, instr & 0xFF);
     case 0x7: return add7((instr >> 8) & 0xF, instr & 0xFF);
@@ -143,7 +150,7 @@ void Chip8::ret0() {
 }
 
 void Chip8::sys0(uint16_t addr) {
-    std::cout << std::hex << addr << std::endl;
+    std::cout << "ignoring sys jump to:" << std::hex << addr << std::endl;
 }
 
 // 0x1
@@ -157,23 +164,30 @@ void Chip8::call2(uint16_t addr) {
         std::cerr << "Stack Overflow in call2()\n";
         return;
     }
-    stack[sp++] = pc;
+    stack[sp] = pc;
+    sp++;
     pc = addr;
 }
 
 // 0x3
 void Chip8::se3(uint8_t vx, uint8_t byte) {
-    if (reg_v[vx] == byte) pc += 2;
+    if (reg_v[vx] == byte) {
+        pc += 2;
+    }
 }
 
 // 0x4
 void Chip8::sne4(uint8_t vx, uint8_t byte) {
-    if (reg_v[vx] != byte) pc += 2;
+    if (reg_v[vx] != byte) {
+        pc += 2;
+    }
 }
 
 // 0x5
 void Chip8::se5(uint8_t vx, uint8_t vy) {
-    if (reg_v[vx] == reg_v[vy]) pc += 2;
+    if (reg_v[vx] == reg_v[vy]) {
+        pc += 2;
+    }
 }
 
 // 0x6
@@ -193,45 +207,91 @@ void Chip8::ld8(uint8_t vx, uint8_t vy) {
 
 void Chip8::or8(uint8_t vx, uint8_t vy) {
     reg_v[vx] |= reg_v[vy];
+    reg_v[0xF] = 0;
 }
 
 void Chip8::and8(uint8_t vx, uint8_t vy) {
     reg_v[vx] &= reg_v[vy];
+    reg_v[0xF] = 0;
+
 }
 
 void Chip8::xor8(uint8_t vx, uint8_t vy) {
     reg_v[vx] ^= reg_v[vy];
+    reg_v[0xF] = 0;
 }
 
 void Chip8::add8(uint8_t vx, uint8_t vy) {
+    // compute sum in 16-bit
     uint16_t sum = reg_v[vx] + reg_v[vy];
-    reg_v[0xF] = (sum > 0xFF) ? 1 : 0;
-    reg_v[vx] = sum & 0xFF;
+
+    // flag overflow
+    if (sum > 0xFF)
+        reg_v[0xF] = 1;
+    else
+        reg_v[0xF] = 0;
+
+    // do not update Vf
+    if (vx != 0xF)
+        // only keep 8-lower bits
+        reg_v[vx] = (sum & 0xFF);
+
 }
 
 void Chip8::sub8(uint8_t vx, uint8_t vy) {
-    reg_v[0xF] = (reg_v[vx] >= reg_v[vy]) ? 1 : 0;
-    reg_v[vx] -= reg_v[vy];
+    uint8_t diff = reg_v[vx] - reg_v[vy];
+
+    // flag underflow
+    if (reg_v[vx] >= reg_v[vy])
+        reg_v[0xF] = 1;
+    else
+        reg_v[0xF] = 0;
+
+    // do not update Vf
+    if (vx != 0xF)
+        reg_v[vx] = diff;
 }
 
+// shift right
 void Chip8::shr8(uint8_t vx, uint8_t vy) {
-    reg_v[0xF] = reg_v[vy] & 0x1;
-    reg_v[vx] = reg_v[vy] >> 1;
+    // set Vf to the least significant bit
+    reg_v[0xF] = reg_v[vy] & 0b1;
+
+    // update if not Vf
+    if (vx != 0xF)
+        reg_v[vx] = reg_v[vy] >> 1;
 }
 
+// note: similar so sub8 however vy and vx order is swapped
 void Chip8::subn8(uint8_t vx, uint8_t vy) {
-    reg_v[0xF] = (reg_v[vy] >= reg_v[vx]) ? 1 : 0;
-    reg_v[vx] = reg_v[vy] - reg_v[vx];
+    uint8_t diff = reg_v[vy] - reg_v[vx];
+
+    // flag underflow
+    if (reg_v[vx] <= reg_v[vy])
+        reg_v[0xF] = 1;
+    else
+        reg_v[0xF] = 0;
+
+    // set if not Vf
+    if (vx != 0xF)
+        reg_v[vx] = diff;
 }
 
+// shift left
 void Chip8::shl8(uint8_t vx, uint8_t vy) {
-    reg_v[0xF] = (reg_v[vy] >> 7) & 0x1;
-    reg_v[vx] = reg_v[vy] << 1;
+    // store most significant bit in Vf
+    reg_v[0xF] = (reg_v[vy] >> 7) & 0b1;
+
+    // update if not Vf
+    if (vx != 0xF)
+        reg_v[vx] = reg_v[vy] << 1;
 }
 
 // 0x9
 void Chip8::sne9(uint8_t vx, uint8_t vy) {
-    if (reg_v[vx] != reg_v[vy]) pc += 2;
+    if (reg_v[vx] != reg_v[vy]) {
+        pc += 2;
+    }
 }
 
 // 0xA
@@ -251,34 +311,59 @@ void Chip8::rndC(uint8_t vx, uint8_t byte) {
 
 // 0xD
 void Chip8::drwD(uint8_t vx, uint8_t vy, uint8_t nibble) {
-    uint8_t x = reg_v[vx] % 64;
-    uint8_t y = reg_v[vy] % 32;
-
+    // Clear collision flag.
     reg_v[0xF] = 0;
 
+    // Calculate starting coordinates (wrap around)
+    uint8_t x0 = reg_v[vx] % 64;
+    uint8_t y0 = reg_v[vy] % 32;
+
+    // Loop over each row of the sprite
     for (int i = 0; i < nibble; i++) {
-        uint8_t pixel = memory[reg_i + i];
-        for (int j = 0; j < 8; j++) {
-            if ((pixel & (0x80 >> j)) != 0) {
-                if (window.get_pixel(x + j, y + i)) {
-                    reg_v[0xF] = 1;
-                }
-                window.set_pixel(x + j, y + i, !window.get_pixel(x + j, y + i));
+        uint8_t byte = memory[reg_i + i];
+        uint8_t y = (y0 + i);
+
+        // dont render if the sprite is clipping
+        if (y > 31) {
+            break;
+        }
+
+        // Loop over each bit in the byte.
+        for (int j = 7; j >= 0; j--) {
+            // Compute the pixel's x and y positions.
+            uint8_t x = (x0 + (7 - j));
+
+            // don't render if the sprite is clipping
+            if (x > 63) {
+                break;
             }
+
+            // get the new and old bit and check the results
+            bool bit = (byte >> j) & 0x1;
+            bool old_bit = window.get_pixel(x, y);
+            bool result = bit ^ old_bit;
+
+            // If the pixel was turned off by the XOR, set the collision flag.
+            if (!result && old_bit) {
+                reg_v[0xF] = 1;
+            }
+
+            // update pixel
+            window.set_pixel(x, y, result);
         }
     }
-    window.update_pixels();
 }
 
 // 0xE
 void Chip8::skpE(uint8_t vx) {
-    if (window.get_key_press(vx)) {
+    if (window.get_key_press(reg_v[vx])) {
+        window.reset_key_press(reg_v[vx]);
         pc += 2;
     }
 }
 
 void Chip8::sknpE(uint8_t vx) {
-    if (!window.get_key_press(vx)) {
+    if (!window.get_key_press(reg_v[vx])) {
         pc += 2;
     }
 }
@@ -289,7 +374,10 @@ void Chip8::ldF_7(uint8_t vx) {
 }
 
 void Chip8::ldF_A(uint8_t vx) {
+    // display the current screen before halting call
     window.render();
+
+    // wait to get a key press
     reg_v[vx] = window.await_keypress();
 }
 
@@ -316,14 +404,19 @@ void Chip8::ldF_33(uint8_t vx) {
     memory[reg_i + 2] = value % 10;
 }
 
+// load register to memory
 void Chip8::ldF_55(uint8_t vx) {
-    for (uint8_t i = 0; i <= vx; i++) {
-        memory[reg_i + i] = reg_v[i];
+    // load Vx into memory
+    for (int i = 0; i <= vx; i++) {
+        memory[reg_i] = reg_v[i];
+        reg_i++;
     }
 }
 
+// load register from memory
 void Chip8::ldF_65(uint8_t vx) {
-    for (uint8_t i = 0; i <= vx; i++) {
-        reg_v[i] = memory[reg_i + i];
+    for (int i = 0; i <= vx; i++) {
+        reg_v[i] = memory[reg_i];
+        reg_i++;
     }
 }

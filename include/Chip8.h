@@ -204,6 +204,6 @@ public:
 
     void memory_dump();
 
-    void run();
+    void run(bool decrement);
 };
 
