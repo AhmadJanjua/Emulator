@@ -104,7 +104,7 @@ void Window::set_pixel(int x, int y, bool on) {
 }
 
 void Window::clear_pixels() {
-    for (int i=0; i<(BUF_WIDTH*BUF_HEIGHT); i++) {
+    for (int i = 0; i < (BUF_WIDTH * BUF_HEIGHT); i++) {
         pixel_buffer[i] = OFF;
 
     }
@@ -113,7 +113,7 @@ void Window::clear_pixels() {
 void Window::render() {
     SDL_UpdateTexture(texture, nullptr, pixel_buffer, BUF_WIDTH);
     SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-    SDL_RenderPresent(renderer); 
+    SDL_RenderPresent(renderer);
 }
 
 void Window::poll() {
@@ -142,31 +142,26 @@ void Window::poll() {
 }
 
 uint8_t Window::await_keypress() {
-    while (true) {
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-            case SDL_QUIT:
+    while (SDL_PollEvent(&event)) {
+        switch (event.type) {
+        case SDL_QUIT:
+            running = false;
+            return 0xFF;
+        case SDL_KEYDOWN:
+            if (event.key.keysym.sym == SDLK_ESCAPE) {
                 running = false;
-                return 0x0;
-            case SDL_KEYDOWN:
-                if (event.key.keysym.sym == SDLK_ESCAPE) {
-                    running = false;
-                    return 0x0;
-                } else {
-                    auto key = KEY_MAP.find(event.key.keysym.sym);
-                    if (key != KEY_MAP.end()) {
-                        return key->second;
-                    }
+                return 0xFF;
+            } else {
+                auto key = KEY_MAP.find(event.key.keysym.sym);
+                if (key != KEY_MAP.end()) {
+                    return key->second;
                 }
             }
         }
     }
+    return 0xFE;
 }
 
 bool Window::get_key_press(int idx) {
     return key_pressed[idx];
-}
-
-void Window::reset_key_press(int idx) {
-    key_pressed[idx] = 0;
 }

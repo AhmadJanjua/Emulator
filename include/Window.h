@@ -69,5 +69,4 @@ public:
 
     // check if key has been pressed
     bool get_key_press(int idx);
-    void reset_key_press(int idx);
 };

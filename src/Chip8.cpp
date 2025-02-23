@@ -1,7 +1,7 @@
 #include <cstdlib>
 #include "Chip8.h"
 
-Chip8::Chip8(Window& w, const char* fpath) : window(w) {
+Chip8::Chip8(Window& w, uint64_t& t, const char* fpath) : window(w), time(t) {
     // open file to end
     std::ifstream istream(fpath, std::ios::binary | std::ios::ate);
 
@@ -53,7 +53,7 @@ void Chip8::memory_dump() {
     std::cout << std::dec << std::endl;
 }
 
-void Chip8::run(bool decrement) {
+void Chip8::run() {
     if (pc < 4096) {
         // get the instruction
         uint16_t instr = memory[pc] << 8 | memory[pc + 1];
@@ -64,8 +64,15 @@ void Chip8::run(bool decrement) {
 
         run_instr(instr);
 
-        if (decrement && reg_t > 0) {
-            reg_t--;
+        if (SDL_GetTicks64() - time >= 16) {
+            if (reg_t > 0) {
+                reg_t--;
+            }
+            if (reg_s > 0) {
+                reg_s--;
+            }
+            time = SDL_GetTicks64();
+            window.render();
         }
     }
 }
@@ -357,7 +364,6 @@ void Chip8::drwD(uint8_t vx, uint8_t vy, uint8_t nibble) {
 // 0xE
 void Chip8::skpE(uint8_t vx) {
     if (window.get_key_press(reg_v[vx])) {
-        window.reset_key_press(reg_v[vx]);
         pc += 2;
     }
 }
@@ -374,11 +380,29 @@ void Chip8::ldF_7(uint8_t vx) {
 }
 
 void Chip8::ldF_A(uint8_t vx) {
-    // display the current screen before halting call
-    window.render();
+    uint8_t key = 0xFE;
+    while (key > 0xF) {
+        // continue updating
+        if (SDL_GetTicks64() - time >= 16) {
+            if (reg_t > 0) {
+                reg_t--;
+            }
+            if (reg_s > 0) {
+                reg_s--;
+            }
+            time = SDL_GetTicks64();
+            window.render();
+        }
 
-    // wait to get a key press
-    reg_v[vx] = window.await_keypress();
+        // wait to get a key press
+        key = window.await_keypress();
+
+        // exit has been called
+        if (key == 0xFF) {
+            return;
+        }
+    }
+    reg_v[vx] = key;
 }
 
 void Chip8::ldF_15(uint8_t vx) {

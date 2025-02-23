@@ -11,29 +11,18 @@ int main(int argc, char* argv[]) {
 
     // Window (Wrapper around SDL)
     Window win = Window();
-    Chip8 chip(win, argv[1]);
-
-    // Main Loop
     uint64_t time_start = SDL_GetTicks64();
+    Chip8 chip(win, time_start, argv[1]);
 
     while (win.running) {
         // Poll Events
         win.poll();
 
         // run
-        chip.run(false);
-        
-        // Run at render at 60 fps
-        if (SDL_GetTicks() - time_start >= 16) {
-            // reset the time + force render to be counted
-            time_start = SDL_GetTicks();
+        chip.run();
 
-            // run and tick the timer
-            chip.run(true);
-
-            // update display
-            win.render();
-        }
+        // run at 500 khz
+        while (SDL_GetTicks64() - time_start <= 1) {}
     }
 
     return 0;

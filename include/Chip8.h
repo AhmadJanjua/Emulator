@@ -8,6 +8,8 @@
 class Chip8 {
 private:
     Window& window;
+    uint64_t& time;
+
 // -- Memory
     // 16-bit program counter
     uint16_t pc = 0x200;
@@ -199,11 +201,11 @@ private:
 
     void run_instr(uint16_t instr);
 public:
-    Chip8(Window& w, const char* fpath);
+    Chip8(Window& w, uint64_t& t, const char* fpath);
     ~Chip8();
 
     void memory_dump();
 
-    void run(bool decrement);
+    void run();
 };
 
